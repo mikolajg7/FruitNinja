@@ -1,6 +1,7 @@
 import cv2
 import random
 import time
+import csv
 from Game import Game
 from HandTracker import HandTracker
 
@@ -14,7 +15,7 @@ class Main:
         self.game = Game(self.width, self.height)  # Obiekt gry
         self.hand_tracker = HandTracker()  # Śledzenie dłoni
         self.running = True  # Flaga działania gry
-        self.state = "start"  # Stan gry: 'start', 'playing', 'ranking'
+        self.state = "enter_name"  # Stan gry: 'enter_name', 'start', 'playing', 'ranking'
 
         # Dane dla przycisków
         self.buttons = {
@@ -22,6 +23,59 @@ class Main:
             "ranking": {"x": 400, "y": 200, "w": 200, "h": 100},
         }
         self.start_timer = None  # Licznik czasu dla przycisku "Start"
+        self.player_name = ""  # Nick gracza
+        self.file_name = "ranking.csv"  # Plik z rankingiem
+        self.user_exists = False  # Flaga: czy użytkownik istnieje w bazie
+
+    def check_user_exists(self):
+        try:
+            with open(self.file_name, mode="r", newline="") as file:
+                reader = csv.reader(file)
+                for row in reader:
+                    if row and row[0].strip().lower() == self.player_name.strip().lower():
+                        return True
+        except FileNotFoundError:
+            # Plik nie istnieje, więc użytkownik nie może być w bazie
+            pass
+        return False
+
+    def render_enter_name_screen(self, frame):
+        # Tworzenie półprzezroczystego czarnego tła
+        overlay = frame.copy()
+        cv2.rectangle(overlay, (0, 0), (self.width, self.height), (0, 0, 0), -1)  # Czarne tło
+        alpha = 0.6  # Przezroczystość tła
+        frame = cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0)
+
+        # Renderowanie tekstu na ekranie
+        text = "Podaj nick: " + self.player_name
+        cv2.putText(frame, text, (50, self.height // 2 - 50),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+
+        cv2.putText(frame, "ENTER aby zatwierdzic", (50, self.height // 2 + 50),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (200, 200, 200), 1)
+
+        # Jeśli użytkownik istnieje, wyświetl komunikat
+        if self.user_exists:
+            cv2.putText(frame, "Nick zajety", (50, self.height // 2 + 100),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
+
+        return frame
+
+    def handle_enter_name(self):
+        key = cv2.waitKey(1) & 0xFF
+        if key == 13:  # Enter
+            if self.player_name.strip():  # Sprawdza, czy nick nie jest pusty
+                self.user_exists = self.check_user_exists()
+                if self.user_exists:
+                    print("Nick zajęty")
+                else:
+                    self.state = "start"  # Przejście do ekranu startowego
+            else:
+                print("Nick nie może być pusty")
+        elif key == 8:  # Backspace
+            self.player_name = self.player_name[:-1]  # Usuń ostatni znak
+        elif key != 255:  # Inne klawisze (uniknięcie błędów z "no key")
+            self.player_name += chr(key)  # Dodaj znak do nicku
 
     def is_hand_in_button(self, hand_landmarks, button):
         if not hand_landmarks:
@@ -81,7 +135,10 @@ class Main:
             hand_landmarks = self.hand_tracker.process_frame(frame)
 
             # Obsługa stanów gry
-            if self.state == "start":
+            if self.state == "enter_name":
+                frame = self.render_enter_name_screen(frame)
+                self.handle_enter_name()
+            elif self.state == "start":
                 self.render_start_screen(frame)
                 self.handle_start_screen(hand_landmarks)
             elif self.state == "playing":
@@ -106,4 +163,10 @@ class Main:
 
 if __name__ == "__main__":
     app = Main()
-    app.game_loop()
+    try:
+        app.game_loop()
+    finally:
+        # Zapisz wynik gracza przed zakończeniem gry
+        if app.state == "playing" and app.player_name.strip():
+            app.game.save_score(app.player_name)
+
