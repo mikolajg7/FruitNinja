@@ -1,23 +1,24 @@
 import cv2
 import Fruit
 import FruitSlice
-
+import csv  # Importujemy moduł do obsługi plików CSV
 
 
 class Game:
-    def __init__(self, width, height):
+    def __init__(self, width, height, file_name="ranking.csv"):
         self.width = width  # Szerokość okna gry
         self.height = height  # Wysokość okna gry
         self.fruits = []  # Lista aktywnych owoców
         self.slices = []  # Lista aktywnych połówek owoców
         self.score = 0  # Wynik gracza
         self.running = True  # Flaga działania gry
+        self.file_name = file_name  # Nazwa pliku z rankingiem
 
     def spawn_fruit(self):
         fruit = Fruit.Fruit(width=self.width, height=self.height)
         self.fruits.append(fruit)
 
-    # Update stanuy gry
+    # Aktualizacja stanu gry
     def update(self):
         for fruit in self.fruits[:]:
             fruit.move()
@@ -38,6 +39,15 @@ class Game:
                 # Tworzymy dwie połówki owocu
                 self.slices.append(FruitSlice.FruitSlice(fruit.x, fruit.y, fruit.radius, fruit.color, -3, -5))
                 self.slices.append(FruitSlice.FruitSlice(fruit.x, fruit.y, fruit.radius, fruit.color, 3, -5))
+
+    # Zapis wyniku do pliku CSV
+    def save_score(self, player_name):
+        try:
+            with open(self.file_name, mode="a", newline="") as file:
+                writer = csv.writer(file)
+                writer.writerow([player_name, self.score])  # Zapisujemy nick i wynik gracza
+        except Exception as e:
+            print(f"Nie udało się zapisać wyniku: {e}")
 
     # Renderowanie gry
     def render(self, frame):
