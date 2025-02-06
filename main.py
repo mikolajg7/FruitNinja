@@ -72,7 +72,7 @@ class Main:
                     self.state = "start"  # Przejście do ekranu startowego
             else:
                 print("Nick nie może być pusty")
-        elif key == 8:  # Backspace
+        elif key in (8,127):  # Backspace
             self.player_name = self.player_name[:-1]  # Usuń ostatni znak
         elif key != 255:  # Inne klawisze (uniknięcie błędów z "no key")
             self.player_name += chr(key)  # Dodaj znak do nicku
