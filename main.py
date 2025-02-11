@@ -212,6 +212,9 @@ class Main:
                 if random.randint(1, 6) == 1:  # Losowe generowanie owoców, ~ co 6 klatek
                     self.game.spawn_fruit()
 
+                if random.randint(1, 60) == 1: # Losowe generowanie bomb, ~ co 60 klatek
+                    self.game.spawn_bomb()
+
                 self.game.update()
                 self.game.check_collision(hand_landmarks)
                 self.game.render(frame)
