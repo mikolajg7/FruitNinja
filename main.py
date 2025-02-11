@@ -23,10 +23,19 @@ class Main:
             "ranking": {"x": 400, "y": 200, "w": 200, "h": 100},
         }
         self.start_timer = None  # Licznik czasu dla przycisku "Start"
+        self.ranking_timer = None  # Licznik czasu dla przycisku "Ranking"
         self.player_name = ""  # Nick gracza
         self.file_name = "ranking.csv"  # Plik z rankingiem
         self.user_exists = False  # Flaga: czy użytkownik istnieje w bazie
 
+    def read_ranking(self):
+        try:
+            with open(self.file_name, mode="r", newline="") as file:
+                reader = csv.reader(file)
+                ranking = sorted([row for row in reader if len(row) == 2], key=lambda x: int(x[1]), reverse=True) # Sortowanie po wynikach omijając puste wiersze
+                return ranking
+        except FileNotFoundError:
+            return [["Brak danych"]]
     def check_user_exists(self):
         try:
             with open(self.file_name, mode="r", newline="") as file:
@@ -61,6 +70,29 @@ class Main:
 
         return frame
 
+    def render_ranking_screen(self, frame):
+        # Rozmycie tła
+        blurred_frame = cv2.GaussianBlur(frame, (25, 25), 10)  # Rozmycie tła
+
+        # Wyświetlenie rankingu
+        ranking= self.read_ranking()
+        start_y= 100
+        center_x = self.width // 2
+        for i, row in enumerate(ranking):
+            text = f"{i + 1}. {row[0]} - {row[1]}"
+            text_size = cv2.getTextSize(text, cv2.FONT_HERSHEY_DUPLEX, 1, 5)[0]
+            text_x = center_x - 400 # Wyśrodkowanie tekstu
+
+            cv2.putText(blurred_frame, text, (text_x, start_y + i * 120),
+                        cv2.FONT_HERSHEY_SIMPLEX, 4, (255, 255, 255), 10)
+
+        #Przycisk Back
+        back_btn = {"x": 50, "y": 50, "w": 200, "h": 100}
+        cv2.rectangle(blurred_frame, (back_btn["x"], back_btn["y"]), (back_btn["x"] + back_btn["w"], back_btn["y"] + back_btn["h"]), (0, 255, 0), -1)
+        cv2.putText(blurred_frame, "Back", (back_btn["x"] + 10, back_btn["y"] + 35), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+
+        return blurred_frame
+
     def handle_enter_name(self):
         key = cv2.waitKey(1) & 0xFF
         if key == 13:  # Enter
@@ -72,7 +104,7 @@ class Main:
                     self.state = "start"  # Przejście do ekranu startowego
             else:
                 print("Nick nie może być pusty")
-        elif key == 8:  # Backspace
+        elif key in (8,127):  # Backspace
             self.player_name = self.player_name[:-1]  # Usuń ostatni znak
         elif key != 255:  # Inne klawisze (uniknięcie błędów z "no key")
             self.player_name += chr(key)  # Dodaj znak do nicku
@@ -93,7 +125,7 @@ class Main:
             # Podstawowy kolor przycisku
             base_color = (255, 255, 0) if label == "ranking" else (0, 255, 0)
 
-            # Wypełnienie postępu (tylko dla przycisku "Start")
+            # Wypełnienie postępu
             if label == "start" and self.start_timer is not None:
                 # Obliczenie proporcji wypełnienia
                 elapsed_time = time.time() - self.start_timer
@@ -102,6 +134,22 @@ class Main:
 
                 # Rysowanie wypełnienia przycisku
                 cv2.rectangle(frame, (x, y), (x + progress_width, y + h), (0, 200, 0), -1)
+
+            if label == "ranking" and self.ranking_timer is not None:
+                # Obliczenie proporcji wypełnienia
+                elapsed_time = time.time() - self.ranking_timer
+                progress = min(elapsed_time / 3.0, 1.0)
+                progress_width = int(w * progress)
+
+                # Rysowanie wypełnienia przycisku
+                cv2.rectangle(frame, (x, y), (x + progress_width, y + h), (200, 200, 0), -1)  # Kolor dla ranking
+
+
+
+            # Tekst na przycisku
+            cv2.putText(frame, label.capitalize(), (x + 20, y + 60),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
+
 
             # Rysowanie ramki przycisku
             cv2.rectangle(frame, (x, y), (x + w, y + h), base_color, 2)
@@ -112,6 +160,7 @@ class Main:
 
     def handle_start_screen(self, hand_landmarks):
         start_button = self.buttons["start"]
+        ranking_button = self.buttons["ranking"]
 
         if self.is_hand_in_button(hand_landmarks, start_button):
             if self.start_timer is None:
@@ -121,6 +170,20 @@ class Main:
                 self.start_timer = None  # Reset licznika
         else:
             self.start_timer = None  # Reset czasu, jeśli dłoń opuści przycisk
+
+        if self.is_hand_in_button(hand_landmarks, ranking_button):
+            if self.ranking_timer is None:
+                self.ranking_timer = time.time()
+            elif time.time() - self.ranking_timer >= 3:
+                self.state = "ranking"
+                self.ranking_timer = None
+        else:
+            self.ranking_timer = None
+
+    def handle_ranking_screen(self, hand_landmarks):
+        back_btn = {"x": 50, "y": 50, "w": 200, "h": 100}
+        if self.is_hand_in_button(hand_landmarks, back_btn):
+            self.state = "start"
 
     def game_loop(self):
         while self.running and self.cap.isOpened():
@@ -141,6 +204,9 @@ class Main:
             elif self.state == "start":
                 self.render_start_screen(frame)
                 self.handle_start_screen(hand_landmarks)
+            elif self.state == "ranking":
+                frame = self.render_ranking_screen(frame)
+                self.handle_ranking_screen(hand_landmarks)
             elif self.state == "playing":
                 # Logika gry
                 if random.randint(1, 6) == 1:  # Losowe generowanie owoców, ~ co 6 klatek
