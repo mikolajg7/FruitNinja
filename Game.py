@@ -2,6 +2,7 @@ import cv2
 import Fruit
 import FruitSlice
 import csv  # Importujemy moduł do obsługi plików CSV
+from Bomb import Bomb, Explosion
 
 
 class Game:
@@ -10,6 +11,8 @@ class Game:
         self.height = height  # Wysokość okna gry
         self.fruits = []  # Lista aktywnych owoców
         self.slices = []  # Lista aktywnych połówek owoców
+        self.bombs = []  # Lista aktywnych bomb
+        self.explosions = [] # Lista aktywnych efektów eksplozji
         self.score = 0  # Wynik gracza
         self.running = True  # Flaga działania gry
         self.file_name = file_name  # Nazwa pliku z rankingiem
@@ -17,6 +20,10 @@ class Game:
     def spawn_fruit(self):
         fruit = Fruit.Fruit(width=self.width, height=self.height)
         self.fruits.append(fruit)
+
+    def spawn_bomb(self):
+        bomb = Bomb(width=self.width, height=self.height)
+        self.bombs.append(bomb)
 
     # Aktualizacja stanu gry
     def update(self):
@@ -30,6 +37,16 @@ class Game:
             if slice_.y > self.height:  # Usuń połówki, jeśli spadną poza ekran
                 self.slices.remove(slice_)
 
+        for bomb in self.bombs[:]:
+            bomb.move()
+            if bomb.y > self.height:  # Usuń bombę, jeśli spadnie poza ekran
+                self.bombs.remove(bomb)
+
+        for explosion in self.explosions[:]:
+            explosion.update()
+            if explosion.life <= 0:
+                self.explosions.remove(explosion)
+
     # Sprawdzanie kolizji z dłonią
     def check_collision(self, hand_landmarks):
         for fruit in self.fruits[:]:
@@ -39,6 +56,13 @@ class Game:
                 # Tworzymy dwie połówki owocu
                 self.slices.append(FruitSlice.FruitSlice(fruit.x, fruit.y, fruit.radius, fruit.color, -3, -5))
                 self.slices.append(FruitSlice.FruitSlice(fruit.x, fruit.y, fruit.radius, fruit.color, 3, -5))
+
+        for bomb in self.bombs[:]:
+            if bomb.check_collision(hand_landmarks):
+                self.bombs.remove(bomb)
+                self.score -= 5
+                self.explosions.append(Explosion(bomb.x, bomb.y))
+
 
     # Zapis wyniku do pliku CSV
     def save_score(self, player_name):
@@ -55,4 +79,8 @@ class Game:
             fruit.draw(frame)
         for slice_ in self.slices:
             slice_.draw(frame)
+        for bomb in self.bombs:
+            bomb.draw(frame)
+        for explosion in self.explosions:
+            explosion.draw(frame)
         cv2.putText(frame, f"Score: {self.score}", (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
