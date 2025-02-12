@@ -93,3 +93,15 @@ class Game:
         for explosion in self.explosions:
             explosion.draw(frame)
         cv2.putText(frame, f"Score: {self.score}", (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+        cv2.putText(frame, f"Time: {self.remaining_time}", (self.width-200,50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+
+    def reset(self):
+        self.fruits = []
+        self.slices = []
+        self.bombs = []
+        self.explosions = []
+        self.score = 0
+        self.running = True
+        self.total_time = 61
+        self.start_time = None
+        self.remaining_time = self.total_time
