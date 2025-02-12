@@ -76,15 +76,25 @@ class Main:
 
         # Wyświetlenie rankingu
         ranking= self.read_ranking()
-        start_y= 100
+
         center_x = self.width // 2
+        num_players= len(ranking)
+        max_font = 4
+        min_font = 1
+        color = (255, 255, 255)
+
+        line_spacing = self.height // num_players  # Dynamiczna wysokość linii
+        font_scale = max(min(line_spacing / 30, max_font), min_font)  # Dostosowanie czcionki
+        (_, text_height), _ = cv2.getTextSize("A", cv2.FONT_HERSHEY_DUPLEX, font_scale, 5)
+        start_y = text_height + 10
+
         for i, row in enumerate(ranking):
             text = f"{i + 1}. {row[0]} - {row[1]}"
-            text_size = cv2.getTextSize(text, cv2.FONT_HERSHEY_DUPLEX, 1, 5)[0]
-            text_x = center_x - 400 # Wyśrodkowanie tekstu
+            text_size = cv2.getTextSize(text, cv2.FONT_HERSHEY_DUPLEX, font_scale, 5)[0]
+            text_x = center_x - text_size[0] //2 # Wyśrodkowanie tekstu
+            text_y = start_y + i * line_spacing  # Odstęp między liniami
 
-            cv2.putText(blurred_frame, text, (text_x, start_y + i * 120),
-                        cv2.FONT_HERSHEY_SIMPLEX, 4, (255, 255, 255), 10)
+            cv2.putText(blurred_frame, text, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, font_scale, color, 2, cv2.LINE_AA)
 
         #Przycisk Back
         back_btn = {"x": 50, "y": 50, "w": 200, "h": 100}
@@ -101,6 +111,7 @@ class Main:
                 if self.user_exists:
                     print("Nick zajęty")
                 else:
+                    self.game.reset() # Reset gry
                     self.state = "start"  # Przejście do ekranu startowego
             else:
                 print("Nick nie może być pusty")
@@ -167,6 +178,7 @@ class Main:
                 self.start_timer = time.time()  # Start liczenia czasu
             elif time.time() - self.start_timer >= 3:  # Po 3 sekundach
                 self.state = "playing"  # Przejście do gry
+                self.game.start_time = time.time()  # Start czasu gry
                 self.start_timer = None  # Reset licznika
         else:
             self.start_timer = None  # Reset czasu, jeśli dłoń opuści przycisk
@@ -184,6 +196,52 @@ class Main:
         back_btn = {"x": 50, "y": 50, "w": 200, "h": 100}
         if self.is_hand_in_button(hand_landmarks, back_btn):
             self.state = "start"
+
+    def render_end_screen(self, frame):
+        blurred_frame = cv2.GaussianBlur(frame, (25, 25), 10)  # Rozmycie tła
+
+        text1 = f"Congratulations {self.player_name}!"
+        text2 = f"Your score is: {self.game.score}"
+
+        font = cv2.FONT_HERSHEY_TRIPLEX
+        font_scale = 5
+        thickness = 10
+        color = (0, 0, 255)
+
+        (text1_width, text1_height), baseline = cv2.getTextSize(text1, font, font_scale, thickness)
+        (text2_width, text2_height), baseline2 = cv2.getTextSize(text2, font, font_scale, thickness)
+
+        if text1_width > self.width: # Skalowanie tekstu, jeśli jest za długi
+            scale_factor = self.width / text1_width
+            font_scale *= scale_factor
+            (text1_width, text1_height), baseline = cv2.getTextSize(text1, font, font_scale, thickness)
+
+        text1_x = (self.width - text1_width) // 2
+        text_y = (self.height - text1_height - text2_height - 20) // 2
+
+        text2_x = (self.width - text2_width) // 2
+        text2_y = text_y + text1_height + 25  # Dodanie odstępu między liniami
+
+        line1_position = (text1_x, text_y)
+        line2_position = (text2_x, text2_y)
+
+        # Rysowanie obu linii
+        cv2.putText(blurred_frame, text1, line1_position, font, font_scale, color, thickness, cv2.LINE_AA)
+        cv2.putText(blurred_frame, text2, line2_position, font, font_scale, color, thickness, cv2.LINE_AA)
+
+        # Przycisk Back
+        back_btn = {"x": 50, "y": 50, "w": 200, "h": 100}
+        cv2.rectangle(blurred_frame, (back_btn["x"], back_btn["y"]),
+                      (back_btn["x"] + back_btn["w"], back_btn["y"] + back_btn["h"]), (0, 255, 0), -1)
+        cv2.putText(blurred_frame, "Back", (back_btn["x"] + 10, back_btn["y"] + 35), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                    (255, 255, 255), 2)
+
+        return blurred_frame
+
+    def handle_end_screen(self, hand_landmarks):
+        back_btn = {"x": 50, "y": 50, "w": 200, "h": 100}
+        if self.is_hand_in_button(hand_landmarks, back_btn):
+            self.state = "enter_name"
 
     def game_loop(self):
         while self.running and self.cap.isOpened():
@@ -207,6 +265,9 @@ class Main:
             elif self.state == "ranking":
                 frame = self.render_ranking_screen(frame)
                 self.handle_ranking_screen(hand_landmarks)
+            elif self.state == "end":
+                frame = self.render_end_screen(frame)
+                self.handle_end_screen(hand_landmarks)
             elif self.state == "playing":
                 # Logika gry
                 if random.randint(1, 6) == 1:  # Losowe generowanie owoców, ~ co 6 klatek
@@ -216,6 +277,9 @@ class Main:
                     self.game.spawn_bomb()
 
                 self.game.update()
+                if self.game.running==False:
+                    app.game.save_score(app.player_name)
+                    self.state = "end"
                 self.game.check_collision(hand_landmarks)
                 self.game.render(frame)
 
