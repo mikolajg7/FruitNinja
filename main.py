@@ -76,15 +76,25 @@ class Main:
 
         # Wyświetlenie rankingu
         ranking= self.read_ranking()
-        start_y= 100
+
         center_x = self.width // 2
+        num_players= len(ranking)
+        max_font = 4
+        min_font = 1
+        color = (255, 255, 255)
+
+        line_spacing = self.height // num_players  # Dynamiczna wysokość linii
+        font_scale = max(min(line_spacing / 30, max_font), min_font)  # Dostosowanie czcionki
+        (_, text_height), _ = cv2.getTextSize("A", cv2.FONT_HERSHEY_DUPLEX, font_scale, 5)
+        start_y = text_height + 10
+
         for i, row in enumerate(ranking):
             text = f"{i + 1}. {row[0]} - {row[1]}"
-            text_size = cv2.getTextSize(text, cv2.FONT_HERSHEY_DUPLEX, 1, 5)[0]
-            text_x = center_x - 400 # Wyśrodkowanie tekstu
+            text_size = cv2.getTextSize(text, cv2.FONT_HERSHEY_DUPLEX, font_scale, 5)[0]
+            text_x = center_x - text_size[0] //2 # Wyśrodkowanie tekstu
+            text_y = start_y + i * line_spacing  # Odstęp między liniami
 
-            cv2.putText(blurred_frame, text, (text_x, start_y + i * 120),
-                        cv2.FONT_HERSHEY_SIMPLEX, 4, (255, 255, 255), 10)
+            cv2.putText(blurred_frame, text, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, font_scale, color, 2, cv2.LINE_AA)
 
         #Przycisk Back
         back_btn = {"x": 50, "y": 50, "w": 200, "h": 100}
