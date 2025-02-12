@@ -1,7 +1,8 @@
 import cv2
 import Fruit
 import FruitSlice
-import csv  # Importujemy moduł do obsługi plików CSV
+import csv
+import time
 from Bomb import Bomb, Explosion
 
 
@@ -16,6 +17,9 @@ class Game:
         self.score = 0  # Wynik gracza
         self.running = True  # Flaga działania gry
         self.file_name = file_name  # Nazwa pliku z rankingiem
+        self.total_time = 61  # Całkowity czas gry (60 sekund + 2 sekundy na rozpoczęcie gry)
+        self.start_time = None  # Czas rozpoczęcia gry
+        self.remaining_time = self.total_time
 
     def spawn_fruit(self):
         fruit = Fruit.Fruit(width=self.width, height=self.height)
@@ -27,6 +31,11 @@ class Game:
 
     # Aktualizacja stanu gry
     def update(self):
+        current_time = time.time()
+        self.remaining_time = max(0, int(self.total_time - (current_time - self.start_time)))
+        if self.remaining_time == 0:
+            self.running = False
+
         for fruit in self.fruits[:]:
             fruit.move()
             if fruit.y > self.height:  # Usuń owoc, jeśli spadnie poza ekran

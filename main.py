@@ -167,6 +167,7 @@ class Main:
                 self.start_timer = time.time()  # Start liczenia czasu
             elif time.time() - self.start_timer >= 3:  # Po 3 sekundach
                 self.state = "playing"  # Przejście do gry
+                self.game.start_time = time.time()  # Start czasu gry
                 self.start_timer = None  # Reset licznika
         else:
             self.start_timer = None  # Reset czasu, jeśli dłoń opuści przycisk
