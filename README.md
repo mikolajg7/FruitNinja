@@ -1,0 +1,7 @@
+- rozdzielczość na fullscreen + rozdzielczosc listy
+- ranking bez wpisania nicku
+- timer zeby bylo widac tez na jasnym tle
+- grafiki (owoce + bomby)
+- reset rankingu?
+- wpisywanie nicku poprawic (scena pusta)
+- dostosowac predkosc, ilosc owocow (ustawienie poziomu trudnosci)

@@ -36,6 +36,7 @@ class Main:
                 return ranking
         except FileNotFoundError:
             return [["Brak danych"]]
+
     def check_user_exists(self):
         try:
             with open(self.file_name, mode="r", newline="") as file:
@@ -75,10 +76,10 @@ class Main:
         blurred_frame = cv2.GaussianBlur(frame, (25, 25), 10)  # Rozmycie tła
 
         # Wyświetlenie rankingu
-        ranking= self.read_ranking()
+        ranking = self.read_ranking()
 
         center_x = self.width // 2
-        num_players= len(ranking)
+        num_players = len(ranking)
         max_font = 4
         min_font = 1
         color = (255, 255, 255)
