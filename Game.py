@@ -4,7 +4,7 @@ import FruitSlice
 import csv
 import time
 from Bomb import Bomb, Explosion
-
+import os
 
 class Game:
     def __init__(self, width, height, file_name="ranking.csv"):
@@ -22,11 +22,11 @@ class Game:
         self.remaining_time = self.total_time
 
     def spawn_fruit(self):
-        fruit = Fruit.Fruit(width=self.width, height=self.height)
+        fruit = Fruit.Fruit(width=self.width, height=self.height, image_folder="images")
         self.fruits.append(fruit)
 
     def spawn_bomb(self):
-        bomb = Bomb(width=self.width, height=self.height)
+        bomb = Bomb(width=self.width, height=self.height, image_path="bomb.png")
         self.bombs.append(bomb)
 
     # Aktualizacja stanu gry
@@ -62,16 +62,18 @@ class Game:
             if fruit.check_collision(hand_landmarks):
                 self.fruits.remove(fruit)
                 self.score += 1
-                # Tworzymy dwie połówki owocu
-                self.slices.append(FruitSlice.FruitSlice(fruit.x, fruit.y, fruit.radius, fruit.color, -3, -5))
-                self.slices.append(FruitSlice.FruitSlice(fruit.x, fruit.y, fruit.radius, fruit.color, 3, -5))
+
+                # Tworzymy połówki owocu na podstawie plików graficznych
+                slice_path = fruit.image_path.replace(".png", "-sliced.png")
+
+                self.slices.append(FruitSlice.FruitSlice(fruit.x - 20, fruit.y, slice_path, -3, -5))
+                self.slices.append(FruitSlice.FruitSlice(fruit.x + 20, fruit.y, slice_path, 3, -5))
 
         for bomb in self.bombs[:]:
             if bomb.check_collision(hand_landmarks):
                 self.bombs.remove(bomb)
                 self.score -= 5
                 self.explosions.append(Explosion(bomb.x, bomb.y))
-
 
     # Zapis wyniku do pliku CSV
     def save_score(self, player_name):
@@ -88,6 +90,7 @@ class Game:
             fruit.draw(frame)
         for slice_ in self.slices:
             slice_.draw(frame)
+
         for bomb in self.bombs:
             bomb.draw(frame)
         for explosion in self.explosions:
