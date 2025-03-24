@@ -15,7 +15,7 @@ class Main:
         self.game = Game(self.width, self.height)  # Obiekt gry
         self.hand_tracker = HandTracker()  # Śledzenie dłoni
         self.running = True  # Flaga działania gry
-        self.state = "enter_name"  # Stan gry: 'enter_name', 'start', 'playing', 'ranking'
+        self.state = "enter_name"  # Stan gry: 'enter_name', 'start', 'playing', 'ranking', 'end'
 
         # Dane dla przycisków
         self.buttons = {
@@ -24,18 +24,34 @@ class Main:
         }
         self.start_timer = None  # Licznik czasu dla przycisku "Start"
         self.ranking_timer = None  # Licznik czasu dla przycisku "Ranking"
+        self.back_timer = None  # Licznik czasu dla przycisku "Back"
         self.player_name = ""  # Nick gracza
         self.file_name = "ranking.csv"  # Plik z rankingiem
         self.user_exists = False  # Flaga: czy użytkownik istnieje w bazie
+        self.user_empty = False  # Flaga: czy pusty login
+
+    def render_button(self, frame, label, button, timer, fill_color, border_color):
+        x, y, w, h = button["x"], button["y"], button["w"], button["h"]
+        if timer is not None:
+            elapsed_time = time.time() - timer
+            progress = min(elapsed_time / 3.0, 1.0)
+            progress_width = int(w * progress)
+            cv2.rectangle(frame, (x, y), (x + progress_width, y + h), fill_color, -1)
+        cv2.rectangle(frame, (x, y), (x + w, y + h), border_color, 2)
+        cv2.putText(frame, label.capitalize(), (x + 20, y + 60),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
 
     def read_ranking(self):
         try:
             with open(self.file_name, mode="r", newline="") as file:
                 reader = csv.reader(file)
-                ranking = sorted([row for row in reader if len(row) == 2], key=lambda x: int(x[1]), reverse=True) # Sortowanie po wynikach omijając puste wiersze
+                # Wczytujemy wiersze z wynikami (sprawdzając, czy wiersz ma dokładnie 2 elementy)
+                ranking = [row for row in reader if len(row) == 2]
+                # Sortowanie malejąco według wyniku i ograniczenie do 10 najlepszych
+                ranking = sorted(ranking, key=lambda x: int(x[1]), reverse=True)[:10]
                 return ranking
         except FileNotFoundError:
-            return [["Brak danych"]]
+            return [["Brak danych", "0"]]
 
     def check_user_exists(self):
         try:
@@ -52,7 +68,7 @@ class Main:
     def render_enter_name_screen(self, frame):
         # Tworzenie półprzezroczystego czarnego tła
         overlay = frame.copy()
-        cv2.rectangle(overlay, (0, 0), (self.width, self.height), (0, 0, 0), -1)  # Czarne tło
+        cv2.rectangle(overlay, (0, 0), (self.width, self.height), (0, 0, 0), -1)
         alpha = 0.6  # Przezroczystość tła
         frame = cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0)
 
@@ -68,40 +84,34 @@ class Main:
         if self.user_exists:
             cv2.putText(frame, "Nick zajety", (50, self.height // 2 + 100),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
+        elif self.user_empty:
+            cv2.putText(frame, "Nick nie moze byc pusty", (50, self.height // 2 + 100),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
 
         return frame
 
     def render_ranking_screen(self, frame):
-        # Rozmycie tła
-        blurred_frame = cv2.GaussianBlur(frame, (25, 25), 10)  # Rozmycie tła
-
-        # Wyświetlenie rankingu
+        blurred_frame = cv2.GaussianBlur(frame, (25, 25), 10)
         ranking = self.read_ranking()
-
         center_x = self.width // 2
-        num_players = len(ranking)
-        max_font = 4
-        min_font = 1
-        color = (255, 255, 255)
+        # Dodajemy nagłówek "Ranking"
+        header = "Ranking"
+        header_size = cv2.getTextSize(header, cv2.FONT_HERSHEY_DUPLEX, 2, 3)[0]
+        header_x = center_x - header_size[0] // 2
+        cv2.putText(blurred_frame, header, (header_x, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 3, cv2.LINE_AA)
 
-        line_spacing = self.height // num_players  # Dynamiczna wysokość linii
-        font_scale = max(min(line_spacing / 30, max_font), min_font)  # Dostosowanie czcionki
-        (_, text_height), _ = cv2.getTextSize("A", cv2.FONT_HERSHEY_DUPLEX, font_scale, 5)
-        start_y = text_height + 10
-
+        # Wyświetlamy ranking zaczynając poniżej nagłówka
+        start_y = 100
+        line_spacing = 40
         for i, row in enumerate(ranking):
             text = f"{i + 1}. {row[0]} - {row[1]}"
-            text_size = cv2.getTextSize(text, cv2.FONT_HERSHEY_DUPLEX, font_scale, 5)[0]
-            text_x = center_x - text_size[0] //2 # Wyśrodkowanie tekstu
-            text_y = start_y + i * line_spacing  # Odstęp między liniami
+            text_size = cv2.getTextSize(text, cv2.FONT_HERSHEY_DUPLEX, 1.2, 2)[0]
+            text_x = center_x - text_size[0] // 2
+            text_y = start_y + i * line_spacing
+            cv2.putText(blurred_frame, text, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 255, 255), 2, cv2.LINE_AA)
 
-            cv2.putText(blurred_frame, text, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, font_scale, color, 2, cv2.LINE_AA)
-
-        #Przycisk Back
-        back_btn = {"x": 50, "y": 50, "w": 200, "h": 100}
-        cv2.rectangle(blurred_frame, (back_btn["x"], back_btn["y"]), (back_btn["x"] + back_btn["w"], back_btn["y"] + back_btn["h"]), (0, 255, 0), -1)
-        cv2.putText(blurred_frame, "Back", (back_btn["x"] + 10, back_btn["y"] + 35), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-
+        back_button = {"x": 50, "y": 50, "w": 200, "h": 100}
+        self.render_button(blurred_frame, "Back", back_button, self.back_timer, (0, 255, 0), (0, 255, 0))
         return blurred_frame
 
     def handle_enter_name(self):
@@ -112,11 +122,12 @@ class Main:
                 if self.user_exists:
                     print("Nick zajęty")
                 else:
-                    self.game.reset() # Reset gry
+                    self.game.reset()  # Reset gry
                     self.state = "start"  # Przejście do ekranu startowego
             else:
+                self.user_empty = True
                 print("Nick nie może być pusty")
-        elif key in (8,127):  # Backspace
+        elif key in (8, 127):  # Backspace
             self.player_name = self.player_name[:-1]  # Usuń ostatni znak
         elif key != 255:  # Inne klawisze (uniknięcie błędów z "no key")
             self.player_name += chr(key)  # Dodaj znak do nicku
@@ -139,34 +150,19 @@ class Main:
 
             # Wypełnienie postępu
             if label == "start" and self.start_timer is not None:
-                # Obliczenie proporcji wypełnienia
                 elapsed_time = time.time() - self.start_timer
-                progress = min(elapsed_time / 3.0, 1.0)  # Ograniczenie progresu do 1.0 (100%)
+                progress = min(elapsed_time / 3.0, 1.0)
                 progress_width = int(w * progress)
-
-                # Rysowanie wypełnienia przycisku
                 cv2.rectangle(frame, (x, y), (x + progress_width, y + h), (0, 200, 0), -1)
 
             if label == "ranking" and self.ranking_timer is not None:
-                # Obliczenie proporcji wypełnienia
                 elapsed_time = time.time() - self.ranking_timer
                 progress = min(elapsed_time / 3.0, 1.0)
                 progress_width = int(w * progress)
+                cv2.rectangle(frame, (x, y), (x + progress_width, y + h), (200, 200, 0), -1)
 
-                # Rysowanie wypełnienia przycisku
-                cv2.rectangle(frame, (x, y), (x + progress_width, y + h), (200, 200, 0), -1)  # Kolor dla ranking
-
-
-
-            # Tekst na przycisku
-            cv2.putText(frame, label.capitalize(), (x + 20, y + 60),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
-
-
-            # Rysowanie ramki przycisku
+            # Rysowanie ramki przycisku oraz tekstu
             cv2.rectangle(frame, (x, y), (x + w, y + h), base_color, 2)
-
-            # Tekst na przycisku
             cv2.putText(frame, label.capitalize(), (x + 20, y + 60),
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
 
@@ -182,7 +178,7 @@ class Main:
                 self.game.start_time = time.time()  # Start czasu gry
                 self.start_timer = None  # Reset licznika
         else:
-            self.start_timer = None  # Reset czasu, jeśli dłoń opuści przycisk
+            self.start_timer = None
 
         if self.is_hand_in_button(hand_landmarks, ranking_button):
             if self.ranking_timer is None:
@@ -194,57 +190,73 @@ class Main:
             self.ranking_timer = None
 
     def handle_ranking_screen(self, hand_landmarks):
-        back_btn = {"x": 50, "y": 50, "w": 200, "h": 100}
-        if self.is_hand_in_button(hand_landmarks, back_btn):
-            self.state = "start"
+        back_button = {"x": 50, "y": 50, "w": 200, "h": 100}
+        if self.is_hand_in_button(hand_landmarks, back_button):
+            if self.back_timer is None:
+                self.back_timer = time.time()
+            elif time.time() - self.back_timer >= 3:
+                self.state = "start"
+                self.back_timer = None
+        else:
+            self.back_timer = None
 
     def render_end_screen(self, frame):
-        blurred_frame = cv2.GaussianBlur(frame, (25, 25), 10)  # Rozmycie tła
+        # Dodajemy półprzezroczyste tło, aby napisy były bardziej czytelne
+        # overlay = frame.copy()
+        # cv2.rectangle(overlay, (0, self.height//3 - 50), (self.width, self.height//3 + 200), (0, 0, 0), -1)
+        # alpha = 0.7
+        # frame = cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0)
 
         text1 = f"Congratulations {self.player_name}!"
         text2 = f"Your score is: {self.game.score}"
-
-        font = cv2.FONT_HERSHEY_TRIPLEX
-        font_scale = 5
-        thickness = 10
-        color = (0, 0, 255)
-
-        (text1_width, text1_height), baseline = cv2.getTextSize(text1, font, font_scale, thickness)
-        (text2_width, text2_height), baseline2 = cv2.getTextSize(text2, font, font_scale, thickness)
-
-        if text1_width > self.width: # Skalowanie tekstu, jeśli jest za długi
-            scale_factor = self.width / text1_width
-            font_scale *= scale_factor
-            (text1_width, text1_height), baseline = cv2.getTextSize(text1, font, font_scale, thickness)
-
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 1
+        thickness = 2
+        color = (0, 255, 255)
+        (text1_width, _), _ = cv2.getTextSize(text1, font, font_scale, thickness)
+        (text2_width, _), _ = cv2.getTextSize(text2, font, font_scale, thickness)
         text1_x = (self.width - text1_width) // 2
-        text_y = (self.height - text1_height - text2_height - 20) // 2
-
         text2_x = (self.width - text2_width) // 2
-        text2_y = text_y + text1_height + 25  # Dodanie odstępu między liniami
+        text_y = self.height // 3
+        cv2.putText(frame, text1, (text1_x, text_y), font, font_scale, color, thickness, cv2.LINE_AA)
+        cv2.putText(frame, text2, (text2_x, text_y + 50), font, font_scale, color, thickness, cv2.LINE_AA)
 
-        line1_position = (text1_x, text_y)
-        line2_position = (text2_x, text2_y)
-
-        # Rysowanie obu linii
-        cv2.putText(blurred_frame, text1, line1_position, font, font_scale, color, thickness, cv2.LINE_AA)
-        cv2.putText(blurred_frame, text2, line2_position, font, font_scale, color, thickness, cv2.LINE_AA)
-
-        # Przycisk Back
-        back_btn = {"x": 50, "y": 50, "w": 200, "h": 100}
-        cv2.rectangle(blurred_frame, (back_btn["x"], back_btn["y"]),
-                      (back_btn["x"] + back_btn["w"], back_btn["y"] + back_btn["h"]), (0, 255, 0), -1)
-        cv2.putText(blurred_frame, "Back", (back_btn["x"] + 10, back_btn["y"] + 35), cv2.FONT_HERSHEY_SIMPLEX, 1,
-                    (255, 255, 255), 2)
-
-        return blurred_frame
+        buttons = {
+            "back": {"x": 50, "y": 50, "w": 200, "h": 100},
+            "ranking": {"x": 300, "y": 50, "w": 200, "h": 100}
+        }
+        self.render_button(frame, "Back", buttons["back"], self.back_timer, (0, 255, 0), (0, 255, 0))
+        self.render_button(frame, "Ranking", buttons["ranking"], self.ranking_timer, (255, 255, 0), (255, 255, 0))
+        return frame
 
     def handle_end_screen(self, hand_landmarks):
-        back_btn = {"x": 50, "y": 50, "w": 200, "h": 100}
-        if self.is_hand_in_button(hand_landmarks, back_btn):
-            self.state = "enter_name"
+        buttons = {
+            "back": {"x": 50, "y": 50, "w": 200, "h": 100},
+            "ranking": {"x": 300, "y": 50, "w": 200, "h": 100}
+        }
+        if self.is_hand_in_button(hand_landmarks, buttons["back"]):
+            if self.back_timer is None:
+                self.back_timer = time.time()
+            elif time.time() - self.back_timer >= 3:
+                self.state = "enter_name"
+                self.back_timer = None
+        else:
+            self.back_timer = None
+
+        if self.is_hand_in_button(hand_landmarks, buttons["ranking"]):
+            if self.ranking_timer is None:
+                self.ranking_timer = time.time()
+            elif time.time() - self.ranking_timer >= 3:
+                self.state = "ranking"
+                self.ranking_timer = None
+        else:
+            self.ranking_timer = None
 
     def game_loop(self):
+        # Ustawienie okna na pełny ekran
+        cv2.namedWindow("Fruit Ninja", cv2.WND_PROP_FULLSCREEN)
+        cv2.setWindowProperty("Fruit Ninja", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+
         while self.running and self.cap.isOpened():
             ret, frame = self.cap.read()
             if not ret:
@@ -274,12 +286,12 @@ class Main:
                 if random.randint(1, 6) == 1:  # Losowe generowanie owoców, ~ co 6 klatek
                     self.game.spawn_fruit()
 
-                if random.randint(1, 60) == 1: # Losowe generowanie bomb, ~ co 60 klatek
+                if random.randint(1, 60) == 1:  # Losowe generowanie bomb, ~ co 60 klatek
                     self.game.spawn_bomb()
 
                 self.game.update()
-                if self.game.running==False:
-                    app.game.save_score(app.player_name)
+                if self.game.running == False:
+                    self.game.save_score(self.player_name)
                     self.state = "end"
                 self.game.check_collision(hand_landmarks)
                 self.game.render(frame)
@@ -294,7 +306,6 @@ class Main:
         self.cap.release()
         cv2.destroyAllWindows()
 
-
 if __name__ == "__main__":
     app = Main()
     try:
@@ -303,4 +314,3 @@ if __name__ == "__main__":
         # Zapisz wynik gracza przed zakończeniem gry
         if app.state == "playing" and app.player_name.strip():
             app.game.save_score(app.player_name)
-
