@@ -84,7 +84,6 @@ class Game:
         except Exception as e:
             print(f"Nie udało się zapisać wyniku: {e}")
 
-    # Renderowanie gry
     def render(self, frame):
         for fruit in self.fruits:
             fruit.draw(frame)
@@ -95,8 +94,32 @@ class Game:
             bomb.draw(frame)
         for explosion in self.explosions:
             explosion.draw(frame)
-        cv2.putText(frame, f"Score: {self.score}", (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-        cv2.putText(frame, f"Time: {self.remaining_time}", (self.width-200,50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+
+        # Ustawienia dla tła tekstu
+        overlay = frame.copy()
+        alpha = 0.5  # Przezroczystość (0 = całkowicie przezroczyste, 1 = pełne krycie)
+
+        # Wymiary prostokątów dla tekstu
+        score_box = (10, 10, 200, 60)  # (x, y, szerokość, wysokość)
+        time_box = (self.width - 210, 10, 200, 60)
+
+        # Rysowanie półprzezroczystych prostokątów
+        cv2.rectangle(overlay, (score_box[0], score_box[1]), 
+                    (score_box[0] + score_box[2], score_box[1] + score_box[3]), 
+                    (0, 0, 0), -1)
+        cv2.rectangle(overlay, (time_box[0], time_box[1]), 
+                    (time_box[0] + time_box[2], time_box[1] + time_box[3]), 
+                    (0, 0, 0), -1)
+
+        # Nakładanie półprzezroczystego tła na oryginalną klatkę
+        cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0, frame)
+
+        # Dodanie tekstu na tło
+        cv2.putText(frame, f"Score: {self.score}", (20, 45), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+        cv2.putText(frame, f"Time: {self.remaining_time}", (self.width - 200, 45), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+
 
     def reset(self):
         self.fruits = []
