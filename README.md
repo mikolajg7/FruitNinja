@@ -1,3 +1,9 @@
+# Setup instructions
+
+1. Install uv: `pip install uv`
+2. Sync environment: `uv sync`
+3. Run the game: `uv run main.py`
+
 - rozdzielczość na fullscreen + rozdzielczosc listy
 - ranking bez wpisania nicku
 - timer zeby bylo widac tez na jasnym tle
