@@ -83,8 +83,10 @@ class Game:
                 # Tworzymy połówki owocu na podstawie plików graficznych
                 slice_path = fruit.image_path.replace(".png", "-sliced.png")
 
-                self.slices.append(FruitSlice.FruitSlice(fruit.x - 20, fruit.y, slice_path, -3, -5))
-                self.slices.append(FruitSlice.FruitSlice(fruit.x + 20, fruit.y, slice_path, 3, -5))
+                self.slices.append(
+                    FruitSlice.FruitSlice(fruit.x - 20, fruit.y, slice_path, -3, -5, self.width, self.height))
+                self.slices.append(
+                    FruitSlice.FruitSlice(fruit.x + 20, fruit.y, slice_path, 3, -5, self.width, self.height))
 
         for bomb in self.bombs[:]:
             if bomb.check_collision(hand_landmarks):

@@ -9,8 +9,9 @@ class Bomb:
         if self.image is None:
             raise ValueError("Nie udało się załadować obrazu bomby!")
 
-        self.image = cv2.resize(self.image, (120, 120))  # Skalowanie obrazu
-        self.radius = 30  # Promień dla kolizji
+        scale = int(min(width, height) * 0.12)
+        self.image = cv2.resize(self.image, (scale, scale))
+        self.radius = scale // 4
 
         edge = random.choice([0, 1, 2, 3])
 

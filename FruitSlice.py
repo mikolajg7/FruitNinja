@@ -3,7 +3,7 @@ import numpy as np
 
 
 class FruitSlice:
-    def __init__(self, x, y, image_path, vx, vy):
+    def __init__(self, x, y, image_path, vx, vy, width, height):
         """
         image_path - ścieżka do gotowego pliku połówki owocu
         """
@@ -23,7 +23,8 @@ class FruitSlice:
             self.image = cv2.cvtColor(self.image, cv2.COLOR_BGR2BGRA)
 
         # 2. Zmniejszamy obrazek do rozsądnych rozmiarów (np. 60x60 px)
-        self.image = cv2.resize(self.image, (100, 100))  # Dopasuj do potrzeb
+        scale = int(min(width, height) * 0.08)
+        self.image = cv2.resize(self.image, (scale, scale))
 
         h, w, _ = self.image.shape
         self.radius = w // 2  # Promień kolizji
