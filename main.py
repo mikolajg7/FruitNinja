@@ -22,6 +22,7 @@ class Main:
             "start": {"x": 100, "y": 200, "w": 200, "h": 100},
             "ranking": {"x": 400, "y": 200, "w": 200, "h": 100},
         }
+        self.previous_state = None  # Przechowywanie poprzedniego stanu (dla przycisku Back)
         self.start_timer = None  # Licznik czasu dla przycisku "Start"
         self.ranking_timer = None  # Licznik czasu dla przycisku "Ranking"
         self.back_timer = None  # Licznik czasu dla przycisku "Back"
@@ -72,6 +73,10 @@ class Main:
         alpha = 0.6  # Przezroczystość tła
         frame = cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0)
 
+        #Ranking
+        ranking_button = {"x": 50, "y": 50, "w": 200, "h": 100}
+        self.render_button(frame, "Ranking", ranking_button, self.ranking_timer, (255, 255, 0), (255, 255, 0))
+
         # Renderowanie tekstu na ekranie
         text = "Podaj nick: " + self.player_name
         cv2.putText(frame, text, (50, self.height // 2 - 50),
@@ -113,24 +118,6 @@ class Main:
         back_button = {"x": 50, "y": 50, "w": 200, "h": 100}
         self.render_button(blurred_frame, "Back", back_button, self.back_timer, (0, 255, 0), (0, 255, 0))
         return blurred_frame
-
-    def handle_enter_name(self):
-        key = cv2.waitKey(1) & 0xFF
-        if key == 13:  # Enter
-            if self.player_name.strip():  # Sprawdza, czy nick nie jest pusty
-                self.user_exists = self.check_user_exists()
-                if self.user_exists:
-                    print("Nick zajęty")
-                else:
-                    self.game.reset()  # Reset gry
-                    self.state = "start"  # Przejście do ekranu startowego
-            else:
-                self.user_empty = True
-                print("Nick nie może być pusty")
-        elif key in (8, 127):  # Backspace
-            self.player_name = self.player_name[:-1]  # Usuń ostatni znak
-        elif key != 255:  # Inne klawisze (uniknięcie błędów z "no key")
-            self.player_name += chr(key)  # Dodaj znak do nicku
 
     def is_hand_in_button(self, hand_landmarks, button):
         if not hand_landmarks:
@@ -184,6 +171,7 @@ class Main:
             if self.ranking_timer is None:
                 self.ranking_timer = time.time()
             elif time.time() - self.ranking_timer >= 3:
+                self.previous_state = self.state
                 self.state = "ranking"
                 self.ranking_timer = None
         else:
@@ -195,7 +183,7 @@ class Main:
             if self.back_timer is None:
                 self.back_timer = time.time()
             elif time.time() - self.back_timer >= 3:
-                self.state = "start"
+                self.state = self.previous_state if self.previous_state else "enter_name"
                 self.back_timer = None
         else:
             self.back_timer = None
@@ -247,6 +235,40 @@ class Main:
             if self.ranking_timer is None:
                 self.ranking_timer = time.time()
             elif time.time() - self.ranking_timer >= 3:
+                self.previous_state = self.state
+                self.state = "ranking"
+                self.ranking_timer = None
+        else:
+            self.ranking_timer = None
+
+    def handle_enter_name(self, hand_landmarks):
+        key = cv2.waitKey(1) & 0xFF
+        if key == 13:  # Enter
+            if self.player_name.strip():  # Sprawdza, czy nick nie jest pusty
+                self.user_exists = self.check_user_exists()
+                if self.user_exists:
+                    print("Nick zajęty")
+                else:
+                    self.game.reset()  # Reset gry
+                    self.state = "start"  # Przejście do ekranu startowego
+            else:
+                self.user_empty = True
+                print("Nick nie może być pusty")
+        elif key in (8, 127):  # Backspace
+            self.player_name = self.player_name[:-1]  # Usuń ostatni znak
+        elif key != 255:  # Inne klawisze (uniknięcie błędów z "no key")
+            self.player_name += chr(key)  # Dodaj znak do nicku
+
+        # ranking
+        # Obsługa przycisku "Ranking"
+        ranking_button = {"x": 50, "y": 50, "w": 200, "h": 100}
+        self.ranking_btn_enter = ranking_button  # zapamiętanie przycisku (jeśli nie ustawione wcześniej)
+
+        if self.is_hand_in_button(hand_landmarks, ranking_button):
+            if self.ranking_timer is None:
+                self.ranking_timer = time.time()
+            elif time.time() - self.ranking_timer >= 3:
+                self.previous_state = self.state
                 self.state = "ranking"
                 self.ranking_timer = None
         else:
@@ -271,7 +293,7 @@ class Main:
             # Obsługa stanów gry
             if self.state == "enter_name":
                 frame = self.render_enter_name_screen(frame)
-                self.handle_enter_name()
+                self.handle_enter_name(hand_landmarks)
             elif self.state == "start":
                 self.render_start_screen(frame)
                 self.handle_start_screen(hand_landmarks)

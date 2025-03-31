@@ -4,7 +4,7 @@ import random
 
 
 class Bomb:
-    def __init__(self, width, height, image_path):
+    def __init__(self, width, height, image_path, difficulty=1.0):
         self.image = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)  # Wczytaj obraz
         if self.image is None:
             raise ValueError("Nie udało się załadować obrazu bomby!")
@@ -17,23 +17,23 @@ class Bomb:
         if edge == 0:  # Wylot z góry
             self.x = random.randint(0, width)
             self.y = -60  # Poza ekranem (góra)
-            self.vx = random.uniform(-4, 4)
-            self.vy = random.uniform(20, 25)
+            self.vx = random.uniform(-4, 4) * difficulty
+            self.vy = random.uniform(20, 25) * difficulty
         elif edge == 1:  # Wylot z dołu
             self.x = random.randint(0, width)
             self.y = height  # Poza ekranem (dół)
-            self.vx = random.uniform(-4, 4)
-            self.vy = -random.uniform(20, 25)
+            self.vx = random.uniform(-4, 4) * difficulty
+            self.vy = -random.uniform(20, 25) * difficulty
         elif edge == 2:  # Wylot z lewej
             self.x = -60  # Poza ekranem (lewa strona)
             self.y = random.randint(0, height)
-            self.vx = random.uniform(20, 25)
-            self.vy = random.uniform(-8, 8)
+            self.vx = random.uniform(20, 25) * difficulty
+            self.vy = random.uniform(-8, 8) * difficulty
         else:  # Wylot z prawej
             self.x = width + 60  # Poza ekranem (prawa strona)
             self.y = random.randint(0, height)
-            self.vx = -random.uniform(20, 25)
-            self.vy = random.uniform(-8, 8)
+            self.vx = -random.uniform(20, 25) * difficulty
+            self.vy = random.uniform(-8, 8) * difficulty
 
         self.gravity = 0.5  # Grawitacja
 
