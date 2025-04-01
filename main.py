@@ -191,7 +191,7 @@ class Main:
     def render_end_screen(self, frame):
         # Dodajemy półprzezroczyste tło, aby napisy były bardziej czytelne
         overlay = frame.copy()
-        cv2.rectangle(overlay, (0, self.height//3 - 50), (self.width, self.height//3 + 200), (0, 0, 0), -1)
+        cv2.rectangle(overlay, (0, self.height//2 - 50), (self.width, self.height//2 + 100), (0, 0, 0), -1)
         alpha = 0.3
         frame = cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0)
 
@@ -205,7 +205,7 @@ class Main:
         (text2_width, _), _ = cv2.getTextSize(text2, font, font_scale, thickness)
         text1_x = (self.width - text1_width) // 2
         text2_x = (self.width - text2_width) // 2
-        text_y = self.height // 3
+        text_y = self.height // 2
         cv2.putText(frame, text1, (text1_x, text_y), font, font_scale, color, thickness, cv2.LINE_AA)
         cv2.putText(frame, text2, (text2_x, text_y + 50), font, font_scale, color, thickness, cv2.LINE_AA)
 
