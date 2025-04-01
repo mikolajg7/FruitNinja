@@ -23,7 +23,7 @@ class FruitSlice:
             self.image = cv2.cvtColor(self.image, cv2.COLOR_BGR2BGRA)
 
         # 2. Zmniejszamy obrazek do rozsądnych rozmiarów (np. 60x60 px)
-        self.image = cv2.resize(self.image, (100, 100))  # Dopasuj do potrzeb
+        self.image = cv2.resize(self.image, (60, 60))  # Dopasuj do potrzeb
 
         h, w, _ = self.image.shape
         self.radius = w // 2  # Promień kolizji

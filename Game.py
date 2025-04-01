@@ -28,7 +28,7 @@ class Game:
 
         # Obliaczanie trudności - rośnie co 10 sekund o 0.2 do maksymalnie 2.5x
         elapsed_time = time.time() - self.start_time if self.start_time else 0
-        difficulty = 1 + min((elapsed_time // 10) * 0.2, 1.5)  # skokowy wzrost
+        difficulty = min((elapsed_time // 10) * 0.2, 1.5)  # skokowy wzrost
 
         fruit = Fruit.Fruit(width=self.width, height=self.height, image_folder="images", difficulty=difficulty)
         print(f"[DEBUG] Fruit difficulty multiplier: {difficulty:.2f}")
@@ -41,7 +41,7 @@ class Game:
 
         # Obliaczanie trudności - rośnie co 10 sekund o 0.2 do maksymalnie 2.5x
         elapsed_time = time.time() - self.start_time if self.start_time else 0
-        difficulty = 1 + min((elapsed_time // 10) * 0.2, 1.5)  # skokowy wzrost
+        difficulty = min((elapsed_time // 10) * 0.2, 1.5)  # skokowy wzrost
 
         bomb = Bomb(width=self.width, height=self.height, image_path="bomb.png", difficulty=difficulty)
         self.bombs.append(bomb)

@@ -103,7 +103,7 @@ class Main:
         header = "Ranking"
         header_size = cv2.getTextSize(header, cv2.FONT_HERSHEY_DUPLEX, 2, 3)[0]
         header_x = center_x - header_size[0] // 2
-        cv2.putText(blurred_frame, header, (header_x, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 3, cv2.LINE_AA)
+        cv2.putText(blurred_frame, header, (header_x, 30), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 3, cv2.LINE_AA)
 
         # Wyświetlamy ranking zaczynając poniżej nagłówka
         start_y = 100
@@ -190,10 +190,10 @@ class Main:
 
     def render_end_screen(self, frame):
         # Dodajemy półprzezroczyste tło, aby napisy były bardziej czytelne
-        # overlay = frame.copy()
-        # cv2.rectangle(overlay, (0, self.height//3 - 50), (self.width, self.height//3 + 200), (0, 0, 0), -1)
-        # alpha = 0.7
-        # frame = cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0)
+        overlay = frame.copy()
+        cv2.rectangle(overlay, (0, self.height//3 - 50), (self.width, self.height//3 + 200), (0, 0, 0), -1)
+        alpha = 0.3
+        frame = cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0)
 
         text1 = f"Congratulations {self.player_name}!"
         text2 = f"Your score is: {self.game.score}"
