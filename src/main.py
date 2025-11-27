@@ -20,26 +20,40 @@ STATE_RANK = "rank"
 class GameEngine:
     def __init__(self):
         pygame.init()
-        self.screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+
+        flags = 0
+        if FULLSCREEN_MODE:
+            flags = pygame.FULLSCREEN | pygame.SCALED
+
+        self.screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT), flags)
+
         pygame.display.set_caption(CAPTION)
+        if FULLSCREEN_MODE:
+            pygame.mouse.set_visible(False)
+
         self.clock = pygame.time.Clock()
 
+        # 1. Ładowanie zasobów
         self.assets = AssetManager()
         self.assets.load_assets()
 
+        # 2. Inicjalizacja systemów
         self.cap = cv2.VideoCapture(0)
         self.cap.set(3, WINDOW_WIDTH)
         self.cap.set(4, WINDOW_HEIGHT)
         self.tracker = HandTracker()
         self.ranking = RankingManager()
 
+        # 3. Grupy Sprite'ów
         self.fruits = pygame.sprite.Group()
         self.bombs = pygame.sprite.Group()
         self.slices = pygame.sprite.Group()
         self.explosions = pygame.sprite.Group()
 
+        # 4. Spawner
         self.spawner = Spawner(self.fruits, self.bombs)
 
+        # 5. Zmienne stanu
         self.state = STATE_MENU
         self.mode = "arcade"
         self.score = 0
@@ -50,6 +64,7 @@ class GameEngine:
         self.hand_trails = {}
         self.running = True
 
+        # 6. UI
         self._init_ui()
 
     def _init_ui(self):
