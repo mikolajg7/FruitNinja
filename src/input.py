@@ -4,7 +4,7 @@ import mediapipe as mp
 class HandTracker:
     def __init__(self):
         self.mp_hands = mp.solutions.hands
-        self.hands = self.mp_hands.Hands(min_detection_confidence=0.7, min_tracking_confidence=0.7)
+        self.hands = self.mp_hands.Hands(min_detection_confidence=0.5, max_num_hands=4, min_tracking_confidence=0.2)
         self.mp_drawing = mp.solutions.drawing_utils
 
     def process_frame(self, frame):
